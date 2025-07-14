@@ -1,0 +1,559 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <title>Data validator</title>
+  <style>
+    table { border-collapse: collapse; width: 100%; margin-top: 20px; font-size: 14px; }
+    th, td { border: 1px solid #ccc; padding: 6px; text-align: left; }
+    td.invalid { background-color: #ffd6d6; }
+    td.valid { background-color: #d7ffd9; }
+    textarea { width: 100%; height: 100px; margin-top: 10px; }
+    select, button { font-size: 14px; margin-top: 10px; }
+    .toolbar { margin-top: 10px; display: flex; gap: 10px; flex-wrap: wrap; }
+    td[contenteditable="true"]:focus { outline: 2px solid #4a90e2; }
+  </style>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+</head>
+<body>
+  
+  <label for="cedisSelect"><strong>CEDIS:</strong></label>
+  <select id="cedisSelect">
+    <option value="">-- Selecciona un CEDIS --</option>
+    <option value="ACAPULCO">ACAPULCO</option>
+    <option value="AGUASCALIENTES">AGUASCALIENTES</option>
+    <option value="ATLACOMULCO">ATLACOMULCO</option>
+    <option value="CANCUN">CANCUN</option>
+    <option value="CELAYA">CELAYA</option>
+    <option value="CHALCO">CHALCO</option>
+    <option value="CHIHUAHUA">CHIHUAHUA</option>
+    <option value="CUERNAVACA">CUERNAVACA</option>
+    <option value="ECATEPEC">ECATEPEC</option>
+    <option value="GUADALAJARA">GUADALAJARA</option>
+    <option value="LA VENTA">LA VENTA</option>
+    <option value="LEON">LEON</option>
+    <option value="MERIDA">MERIDA</option>
+    <option value="MONTERREY">MONTERREY</option>
+    <option value="MORELIA">MORELIA</option>
+    <option value="PACHUCA">PACHUCA</option>
+    <option value="PUEBLA">PUEBLA</option>
+    <option value="QUERETARO">QUERETARO</option>
+    <option value="REYES">REYES</option>
+    <option value="SAN LUIS POTOSI">SAN LUIS POTOSI</option>
+    <option value="TEJUPILCO">TEJUPILCO</option>
+    <option value="TEQUISQUIAPAN">TEQUISQUIAPAN</option>
+    <option value="TOLUCA">TOLUCA</option>
+    <option value="VALLEJO">VALLEJO</option>
+    <option value="VERACRUZ">VERACRUZ</option>
+    <option value="VILLAHERMOSA">VILLAHERMOSA</option>
+  </select>
+
+  <label for="canalSelect"><strong>Canal de venta:</strong></label>
+  <select id="canalSelect">
+  <option value="">-- Selecciona un canal de venta --</option>
+  </select>
+
+  <label for="subcanalSelect"><strong>Subcanal:</strong></label>
+  <select id="subcanalSelect">
+  <option value="">-- Selecciona un subcanal --</option>
+  </select>
+
+  <label for="giroSelect"><strong>Giro comercial:</strong></label>
+  <select id="giroSelect">
+  <option value="">-- Selecciona un Giro --</option>
+  </select>
+  
+  <h2>📋 Validador de Datos</h2>
+  <textarea id="pasteArea" placeholder="Ctrl + V pega aquí los datos sin encabezados de columna..."></textarea>
+
+  <div class="toolbar">
+    <button id="exportBtn">⬇️ Exportar a Excel</button>
+    <button id="deleteRowsBtn">🗑️ Eliminar filas seleccionadas</button>
+    <button id="clearAllBtn">🧹 Borrar todos los registros</button>
+  </div>
+
+  <table id="dataTable" spellcheck="false">
+    <thead>
+      <tr>
+        <th>RAZÓN SOCIAL</th>
+        <th>NOMBRE NEGOCIO</th>
+        <th>CALLE</th>
+        <th>EXT</th>
+        <th>INT</th>
+        <th>ENTRE CALLE</th>
+        <th>ENTRE CALLE2</th>
+        <th>CODIGO POSTAL</th>
+        <th>COLONIA</th>
+        <th>LATITUD</th>
+        <th>LONGITUD</th>
+        <th>VALIDACIÓN</th>
+        <th>GEO-DISTANCIA</th>
+        <th>CANAL DE VENTA</th>
+        <th>SUBCANAL</th>
+        <th>GIRO COMERCIAL</th>
+        <th>CEDIS ASIGNADO</th>
+        <th>PLAZA DE DISTRIBUCIÓN</th>
+        <th>ZONA NIELSEN</th>
+        <th>REGIONAL RESPONSABLE</th>
+        <th>TIPO DE ENTREGA</th>
+        <th>✔️</th>
+      </tr>
+    </thead>
+    <tbody></tbody>
+  </table>
+
+  <script>
+    let sepomex = {}, cedisInfo = {}; canalesVenta = {}; girosComerciales = {};
+
+    fetch("canVenta.json")
+      .then(res => res.json())
+      .then(data => {
+        canalesVenta = data;
+
+        const canalSelect = document.getElementById("canalSelect");
+        
+        const canalesPermitidos = ["DETALLE"];
+        canalesPermitidos.forEach(canal => {
+          if (canalesVenta[canal]) {
+            const option = document.createElement("option");
+            option.value = canal;
+            option.textContent = canal;
+            canalSelect.appendChild(option);
+          }
+        });
+
+        const subSelect = document.getElementById("subcanalSelect");
+
+        canalSelect.addEventListener("change", e => {
+          const canal = e.target.value.trim();
+
+          // Subcanales
+          const subcanales = canalesVenta[canal]?.SUBCANAL || [];
+          subSelect.innerHTML = "<option value=''>-- Selecciona un Subcanal --</option>";
+          subcanales.forEach(sub => {
+            const opt = document.createElement("option");
+            opt.value = opt.textContent = sub;
+            subSelect.appendChild(opt);
+          });
+
+          // Giros comerciales
+          const giros = girosComerciales[canal]?.["GIRO CLIENTE"] || [];
+          giroSelect.innerHTML = "<option value=''>-- Selecciona un Giro --</option>";
+          giros.forEach(g => {
+            const opt = document.createElement("option");
+            opt.value = opt.textContent = g;
+            giroSelect.appendChild(opt);
+          });
+        });
+      })
+      .catch(err => alert("Error cargando canVenta.json: " + err));
+
+    fetch("giroCom.json")
+      .then(res => res.json())
+      .then(data => {
+        girosComerciales = data;
+
+        const giroSelect = document.getElementById("giroSelect");
+        const canalSelect = document.getElementById("canalSelect");
+
+        canalSelect.addEventListener("change", e => {
+          const canal = e.target.value.trim();
+          const giros = girosComerciales[canal]?.["GIRO CLIENTE"] || [];
+
+          giroSelect.innerHTML = "<option value=''>-- Selecciona un Giro --</option>";
+          giros.forEach(g => {
+            const opt = document.createElement("option");
+            opt.value = opt.textContent = g;
+            giroSelect.appendChild(opt);
+          });
+        });
+      })
+      .catch(err => alert("Error cargando giroCom.json: " + err));
+
+    fetch("sepomex.json")
+      .then(res => res.json())
+      .then(data => { sepomex = data; })
+      .catch(err => alert("Error cargando sepomex.json: " + err));
+
+    fetch("cedis.json")
+      .then(res => res.json())
+      .then(data => {
+        cedisInfo = data;
+        const select = document.getElementById("cedisSelect");
+        Object.keys(cedisInfo).forEach(cedis => {
+          const option = document.createElement("option");
+          option.value = cedis.trim();
+          option.textContent = cedis.trim();
+          select.appendChild(option);
+        });
+
+      document.getElementById("cedisSelect").addEventListener("change", () => {
+        const nuevoCedis = document.getElementById("cedisSelect").value;
+        const rows = tableBody.querySelectorAll("tr");
+
+        rows.forEach(row => {
+          if (!cedisInfo[nuevoCedis]) return;
+
+          row.children[16].textContent = nuevoCedis;
+          row.children[17].textContent = cedisInfo[nuevoCedis]["CVE PLAZA"]?.[0] || "";
+          row.children[18].textContent = cedisInfo[nuevoCedis]["ZONA NIELSEN"]?.[0] || "";
+          row.children[19].textContent = cedisInfo[nuevoCedis]["REGIONAL RESPONSABLE"]?.[0] || "";
+          row.children[20].textContent = cedisInfo[nuevoCedis]["TIPO DE ENTREGA"]?.[0] || "";
+        });
+      });
+
+      })
+      .catch(err => alert("Error cargando cedis.json: " + err));
+
+
+    const contieneCaracteresEspeciales = texto => /[^A-Z0-9\s]/.test(texto);
+    const contieneAbreviaturas = texto => /\b(COL|AV|CALLE|NUM|NO|EXT|INT|ENTRE|CDA|MZ|LT|DEPTO)\b/.test(texto);
+
+    const corregirCoordenada = (valor, tipo) => {
+      if (!valor) return null;
+      const match = valor.match(/^(-?\d{2,3})\.(\d{1,10})$/);
+      if (!match) return null;
+      const enterosConSigno = match[1];
+      const enteros = enterosConSigno.replace('-', '');
+      let decimales = match[2];
+      let esperado = tipo === 'lng' && enteros.length === 3 ? 5 : 6;
+      decimales = decimales.slice(0, esperado).padEnd(esperado, '0');
+      return `${enterosConSigno}.${decimales}`;
+    };
+
+    const calcularDistanciaKm = (lat1, lng1, lat2, lng2) => {
+      const R = 6371;
+      const toRad = deg => deg * Math.PI / 180;
+      const dLat = toRad(lat2 - lat1);
+      const dLon = toRad(lng2 - lng1);
+      const a = Math.sin(dLat / 2) ** 2 +
+                Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) *
+                Math.sin(dLon / 2) ** 2;
+      return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+    };
+
+    const pasteArea = document.getElementById("pasteArea");
+    const tableBody = document.querySelector("#dataTable tbody");
+
+    pasteArea.addEventListener("paste", e => {
+      e.preventDefault();
+
+      //Validar selección de CEDIS antes de pegar los datos
+
+      const cedis = document.getElementById("cedisSelect").value;
+      if (!cedis) return alert("⚠️ Debes seleccionar un CEDIS antes de pegar datos.");
+
+      //Validar selección de canal de venta antes de pegar los datos
+      const canal = document.getElementById("canalSelect").value;
+      const subcanal = document.getElementById("subcanalSelect").value;
+      const giro = document.getElementById("giroSelect").value;
+      if (!canal) return alert("⚠️ Debes seleccionar un CANAL DE VENTA antes de pegar datos.");
+      if (!subcanal) return alert("⚠️ Debes seleccionar un SUBCANAL antes de pegar datos.");
+      if (!giro) return alert("⚠️ Debes seleccionar un GIRO COMERCIAL antes de pegar datos.");
+
+      const text = (e.clipboardData || window.clipboardData).getData("text");
+      const rows = text.trim().split("\n");
+      const esValido = rows.every(row => row.split("\t").length >= 11);
+      if (!esValido) return alert("⚠️ Error al pegar datos: asegúrate de incluir todas las columnas necesarias.");
+      rows.forEach(row => {
+        const cols = row.split("\t").map(c => c.trim().toUpperCase());
+        if (cols.length < 11) return;
+        const tr = document.createElement("tr");
+        cols.forEach(val => {
+          const td = document.createElement("td");
+          td.contentEditable = true;
+          td.textContent = val;
+          tr.appendChild(td);
+        });
+        // Insertar columnas dinámicas
+        for (let i = cols.length; i < 13; i++) tr.appendChild(document.createElement("td"));        
+
+        const tdCanal = document.createElement("td");
+        tdCanal.textContent = canal;
+        tr.appendChild(tdCanal);
+
+        const tdSubcanal = document.createElement("td");
+        tdSubcanal.textContent = subcanal;
+        tr.appendChild(tdSubcanal);
+
+        const tdGiro = document.createElement("td");
+        tdGiro.textContent = giro;
+        tr.appendChild(tdGiro);
+
+        const tdCedis = document.createElement("td");
+        tdCedis.textContent = cedis;
+        tr.appendChild(tdCedis);
+
+        const tdPlaza = document.createElement("td");
+        tdPlaza.textContent = (cedisInfo[cedis] && cedisInfo[cedis]["CVE PLAZA"]) ? cedisInfo[cedis]["CVE PLAZA"][0] : "";
+        tr.appendChild(tdPlaza);
+
+        const tdZona = document.createElement("td");
+        tdZona.textContent = (cedisInfo[cedis] && cedisInfo[cedis]["ZONA NIELSEN"]) ? cedisInfo[cedis]["ZONA NIELSEN"][0] : "";
+        tdZona.contentEditable = false;
+        tr.appendChild(tdZona);
+
+        const tdRegional = document.createElement("td");
+        tdRegional.textContent = (cedisInfo[cedis] && cedisInfo[cedis]["REGIONAL RESPONSABLE"]) ? cedisInfo[cedis]["REGIONAL RESPONSABLE"][0] : "";
+        tdRegional.contentEditable = false;
+        tr.appendChild(tdRegional);
+
+        const tdEntrega = document.createElement("td");
+        tdEntrega.textContent = (cedisInfo[cedis] && cedisInfo[cedis]["TIPO DE ENTREGA"]) ? cedisInfo[cedis]["TIPO DE ENTREGA"][0] : "";
+        tdEntrega.contentEditable = false;
+        tr.appendChild(tdEntrega);
+
+        const tdCheck = document.createElement("td");
+        const checkbox = document.createElement("input");
+        checkbox.type = "checkbox";
+        tdCheck.appendChild(checkbox);
+        tr.appendChild(tdCheck);
+
+        tableBody.appendChild(tr);
+        validarFila(tr);
+      });
+    });
+
+    function validarFila(tr) {
+      const cells = tr.querySelectorAll("td");
+      const errores = [];
+      const [razon, negocio, calle, ext, int, entre1, entre2, cp, col, lat, lng] = Array.from(cells).slice(0, 11).map(td => td.textContent.trim().toUpperCase());
+      const cpValido = /^\d{5}$/.test(cp);
+      const ref = sepomex[cp] || {};
+      const cpExiste = cpValido && Object.keys(ref).length > 0;
+      const coloniasValidas = Array.isArray(ref.colonias) ? ref.colonias.map(c => c.toUpperCase()) : [];
+
+      const marcar = (i, condicion, mensaje) => {
+        cells[i].classList.remove("valid", "invalid");
+        cells[i].classList.add(condicion ? "valid" : "invalid");
+        if (!condicion && mensaje) errores.push(mensaje);
+      };
+
+      marcar(0, razon && !contieneCaracteresEspeciales(razon), "RAZÓN inválida");
+      marcar(1, negocio && !contieneCaracteresEspeciales(negocio), "NEGOCIO inválido");
+      marcar(2, calle && !contieneCaracteresEspeciales(calle) && !contieneAbreviaturas(calle), "CALLE inválida");
+      marcar(3, /^[A-Z0-9\s]+$/.test(ext), "EXT inválido");
+      marcar(4, !int || /^[A-Z0-9\s]+$/.test(int), "INT inválido");
+      marcar(5, !entre1 || (!contieneCaracteresEspeciales(entre1) && !contieneAbreviaturas(entre1)), "ENTRE CALLE inválido");
+      marcar(6, !entre2 || (!contieneCaracteresEspeciales(entre2) && !contieneAbreviaturas(entre2)), "ENTRE CALLE2 inválido");
+      marcar(7, cpExiste, "CP inválido o inexistente");
+
+      if (cpExiste && !coloniasValidas.includes(col)) {
+        // Obtener el valor original ingresado por el usuario desde el select si ya existe
+        const currentTd = cells[8];
+        let originalValue = col;
+
+        if (currentTd.querySelector("select")) {
+          const existingSelect = currentTd.querySelector("select");
+          const selectedOption = existingSelect.options[0];
+          if (selectedOption && selectedOption.disabled) {
+            originalValue = selectedOption.value;
+          }
+        }
+
+        const select = document.createElement("select");
+
+        const optIngresado = document.createElement("option");
+        optIngresado.value = optIngresado.textContent = originalValue;
+        optIngresado.selected = true;
+        optIngresado.disabled = true;
+        select.appendChild(optIngresado);
+
+        const normalizar = str => str.normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/\s+/g, " ").trim().toUpperCase();
+        const colNormalizada = normalizar(originalValue);
+
+        ref.colonias.forEach(option => {
+          const optNormalizada = normalizar(option);
+          if (optNormalizada !== colNormalizada) {
+            const opt = document.createElement("option");
+            opt.textContent = opt.value = optNormalizada;
+            select.appendChild(opt);
+          }
+        });
+
+        select.addEventListener("change", () => {
+          cells[8].textContent = select.value.toUpperCase();
+          validarFila(tr);
+        });
+
+        document.getElementById("canalSelect").addEventListener("change", e => {
+          const canal = e.target.value;
+          const subcanalSelect = document.getElementById("subcanalSelect");
+          subcanalSelect.innerHTML = '<option value="">-- Selecciona un subcanal --</option>';
+          if (canalesVenta[canal]) {
+            canalesVenta[canal]["SUBCANAL"].forEach(sc => {
+              const opt = document.createElement("option");
+              opt.value = opt.textContent = sc;
+              subcanalSelect.appendChild(opt);
+            });
+          }
+        });
+
+        currentTd.innerHTML = "";
+        currentTd.appendChild(select);
+        currentTd.classList.remove("valid");
+        currentTd.classList.add("invalid");
+        errores.push("COLONIA no coincide con CP");
+      } else {
+        marcar(8, coloniasValidas.includes(col), "COLONIA inválida");
+      }
+
+      const latFix = corregirCoordenada(lat, 'lat');
+      const lngFix = corregirCoordenada(lng, 'lng');
+
+      latFix ? (cells[9].textContent = latFix, cells[9].classList.add("valid")) : errores.push("LATITUD inválida");
+      lngFix ? (cells[10].textContent = lngFix, cells[10].classList.add("valid")) : errores.push("LONGITUD inválida");
+
+      cells[11].textContent = errores.length ? `❌ ${errores.join(", ")}` : "✔️ VÁLIDO";
+      cells[11].className = errores.length ? "invalid" : "valid";
+
+      let mensajeDistancia = "❌ Sin validar";
+      if (latFix && lngFix && ref.lat && ref.lng) {
+        const distancia = calcularDistanciaKm(+latFix, +lngFix, +ref.lat, +ref.lng);
+        const zona = (ref.zona || "URBANA").toUpperCase();
+        const umbral = zona === "RURAL" ? 5 : 3;
+        mensajeDistancia = distancia <= umbral ? `✔️ ${distancia.toFixed(2)} km` : `⚠️ ${distancia.toFixed(2)} km (límite ${umbral} km)`;
+      }
+      cells[12].textContent = mensajeDistancia;
+      cells[12].className = mensajeDistancia.startsWith("✔️") ? "valid" : "invalid";
+    }
+
+    tableBody.addEventListener("click", e => {
+      const td = e.target.closest("td");
+      if (!td) return;
+
+      const row = td.parentElement;
+      const colIndex = Array.from(row.children).indexOf(td);
+
+      // Ya contiene un select (no hacer nada)
+      if (td.querySelector("select")) return;
+
+      // SUBCANAL (colIndex 14)
+      if (colIndex === 14) {
+        const canal = row.children[13]?.textContent?.trim();
+        const subcanales = canalesVenta[canal]?.SUBCANAL || [];
+        if (subcanales.length === 0) return;
+
+        const currentValue = td.textContent.trim();
+        const select = document.createElement("select");
+
+        subcanales.forEach(sc => {
+          const opt = document.createElement("option");
+          opt.value = sc;
+          opt.textContent = sc;
+          if (sc.toUpperCase() === currentValue.toUpperCase()) opt.selected = true;
+          select.appendChild(opt);
+        });
+
+        td.innerHTML = "";
+        td.appendChild(select);
+        select.focus();
+
+        // Evitar cierre por click externo
+        setTimeout(() => {
+          document.addEventListener("click", cerrarSelectSubcanal);
+        }, 0);
+
+        function cerrarSelectSubcanal(ev) {
+          if (!td.contains(ev.target)) {
+            document.removeEventListener("click", cerrarSelectSubcanal);
+            td.textContent = select.value || currentValue;
+            validarFila(row);
+          }
+        }
+
+        select.addEventListener("change", () => {
+          document.removeEventListener("click", cerrarSelectSubcanal);
+          td.textContent = select.value;
+          validarFila(row);
+        });
+      }
+
+      // GIRO COMERCIAL (colIndex 15)
+      if (colIndex === 15) {
+        const canal = row.children[13]?.textContent?.trim();
+        const giros = girosComerciales[canal]?.["GIRO CLIENTE"] || [];
+        if (giros.length === 0) return;
+
+        const currentValue = td.textContent.trim();
+        const select = document.createElement("select");
+
+        giros.forEach(g => {
+          const opt = document.createElement("option");
+          opt.value = g;
+          opt.textContent = g;
+          if (g.toUpperCase() === currentValue.toUpperCase()) opt.selected = true;
+          select.appendChild(opt);
+        });
+
+        td.innerHTML = "";
+        td.appendChild(select);
+        select.focus();
+
+        // Evitar cierre por click externo
+        setTimeout(() => {
+          document.addEventListener("click", cerrarSelectGiro);
+        }, 0);
+
+        function cerrarSelectGiro(ev) {
+          if (!td.contains(ev.target)) {
+            document.removeEventListener("click", cerrarSelectGiro);
+            td.textContent = select.value || currentValue;
+            validarFila(row);
+          }
+        }
+
+        select.addEventListener("change", () => {
+          document.removeEventListener("click", cerrarSelectGiro);
+          td.textContent = select.value;
+          validarFila(row);
+        });
+      }
+    });
+
+    document.getElementById("exportBtn").addEventListener("click", () => {
+      const wb = XLSX.utils.book_new();
+      const ws_data = [[
+        "RAZÓN SOCIAL", "NOMBRE NEGOCIO", "CALLE", "EXT", "INT", "ENTRE CALLE",
+        "ENTRE CALLE2", "CP", "COLONIA", "LATITUD", "LONGITUD",
+        "VALIDACIÓN", "GEO-DISTANCIA", "CANAL DE VENTA", "SUBCANAL", "GIRO COMERCIAL", 
+        "CEDIS ASIGNADO", "PLAZA DE DISTRIBUCIÓN", "ZONA NIELSEN", "REGIONAL RESPONSABLE", "TIPO DE ENTREGA"
+      ]];
+      tableBody.querySelectorAll("tr").forEach(tr => {
+        const row = [];
+        tr.querySelectorAll("td").forEach((td, i) => {
+          if (i < 21) row.push(td.textContent.trim());
+        });
+        ws_data.push(row);
+      });
+      const ws = XLSX.utils.aoa_to_sheet(ws_data);
+      XLSX.utils.book_append_sheet(wb, ws, "Clientes Validados");
+      XLSX.writeFile(wb, "clientes_validados.xlsx");
+    });
+
+    document.getElementById("deleteRowsBtn").addEventListener("click", () => {
+      tableBody.querySelectorAll("tr").forEach(tr => {
+        const checkbox = tr.querySelector("input[type='checkbox']");
+        if (checkbox && checkbox.checked) tr.remove();
+      });
+    });
+
+    document.getElementById("clearAllBtn").addEventListener("click", () => {
+      if (confirm("¿Estás seguro de que deseas borrar todos los registros?")) {
+        tableBody.innerHTML = "";
+        document.getElementById("cedisSelect").value = "";
+        document.getElementById("canalSelect").value = "";
+        document.getElementById("subcanalSelect").value = "";
+      }
+    });
+
+    window.addEventListener("DOMContentLoaded", () => {
+    document.getElementById("cedisSelect").selectedIndex = 0;
+    document.getElementById("canalSelect").selectedIndex = 0;
+    document.getElementById("subcanalSelect").selectedIndex = 0;
+    });  
+
+  </script>
+</body>
+</html>
+

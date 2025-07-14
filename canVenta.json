@@ -1,0 +1,152 @@
+{
+  "AUTOSERVICIOS": {
+    "MACROCANAL": [
+      "MODERNO"
+    ],
+    "SUBCANAL": [
+      "AUTOSERVICIOS",
+      "AUTOSERVICIOS GENERICO"
+    ]
+  },
+  "B2B": {
+    "MACROCANAL": [
+      "B2B"
+    ],
+    "SUBCANAL": [
+      "B2B"
+    ]
+  },
+  "CLUB DE PRECIOS": {
+    "MACROCANAL": [
+      "MODERNO"
+    ],
+    "SUBCANAL": [
+      "CLUB DE PRECIOS"
+    ]
+  },
+  "DETALLE": {
+    "MACROCANAL": [
+      "TRADICIONAL"
+    ],
+    "SUBCANAL": [
+      "DETALLE DESARROLLADO",
+      "DETALLE GENERICO",
+      "DETALLE PURO"
+    ]
+  },
+  "DISTRIBUIDORES": {
+    "MACROCANAL": [
+      "TRADICIONAL"
+    ],
+    "SUBCANAL": [
+      "DISTRIBUIDORES",
+      "DISTRIBUIDORES GENERICO"
+    ]
+  },
+  "E-COMMERCE": {
+    "MACROCANAL": [
+      "MODERNO"
+    ],
+    "SUBCANAL": [
+      "B2B",
+      "PURE PLAYERS",
+      "QUICK COMMERCE"
+    ]
+  },
+  "EXPORTACION": {
+    "MACROCANAL": [
+      "EXPORTACION"
+    ],
+    "SUBCANAL": [
+      "EXPORTACION"
+    ]
+  },
+  "FOOD SERVICE": {
+    "MACROCANAL": [
+      "MODERNO"
+    ],
+    "SUBCANAL": [
+      "FOOD SERVICE GENERICO",
+      "FS CORPORATIVO",
+      "FS TRADICIONAL"
+    ]
+  },
+  "GEPP": {
+    "MACROCANAL": [
+      "TRADICIONAL"
+    ],
+    "SUBCANAL": [
+      "GEPP DETALLE",
+      "GEPP HOGAR"
+    ]
+  },
+  "GOBIERNO": {
+    "MACROCANAL": [
+      "GOBIERNO"
+    ],
+    "SUBCANAL": [
+      "GOBIERNO AUTOSERVICIOS",
+      "GOBIERNO GENERICO",
+      "PROGRAMA SOCIAL",
+      "TIENDA RURAL"
+    ]
+  },
+  "MARCA PROPIA": {
+    "MACROCANAL": [
+      "MARCA PROPIA"
+    ],
+    "SUBCANAL": [
+      "MARCA PROPIA AUTOSERVICIOS",
+      "MARCA PROPIA CLUB DE PRECIOS",
+      "MARCA PROPIA HARD DISCOUNT"
+    ]
+  },
+  "MAYOREO": {
+    "MACROCANAL": [
+      "TRADICIONAL"
+    ],
+    "SUBCANAL": [
+      "MAYOREO CORPORATIVO",
+      "MAYOREO GENERICO",
+      "MEDIO MAYOREO"
+    ]
+  },
+  "OTROS": {
+    "MACROCANAL": [
+      "OTROS"
+    ],
+    "SUBCANAL": [
+      "ALIANZA",
+      "ALMACENES",
+      "ANDEN",
+      "DONACION",
+      "EMPLEADO",
+      "FILIALES",
+      "OTROS INGRESOS ",
+      "SEMEN Y EMBRIONES",
+      "SOCIOS",
+      "TRANSPORTISTAS "
+    ]
+  },
+  "PROXIMIDAD": {
+    "MACROCANAL": [
+      "MODERNO"
+    ],
+    "SUBCANAL": [
+      "CONVENIENCIA",
+      "FARMACIAS",
+      "HARD DISCOUNT",
+      "PROXIMIDAD GENERICO"
+    ]
+  },
+  "TIENDAS": {
+    "MACROCANAL": [
+      "TIENDAS"
+    ],
+    "SUBCANAL": [
+      "LECHERIA ALPURA",
+      "TIENDAS DELICIAS",
+      "TIENDAS GENERICO"
+    ]
+  }
+}

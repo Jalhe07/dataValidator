@@ -1,0 +1,126 @@
+{
+  "DETALLE": {
+    "GIRO CLIENTE": [
+      "ABARROTES",
+      "CREMERIA",
+      "MINISUPER",
+      "MISCELANEA",
+      "OTROS",
+      "OTROS GIROS",
+      "PANADERIA",
+      "PARTICULAR CON VENTA"
+    ]
+  },
+  "AUTOSERVICIOS": {
+    "GIRO CLIENTE": [
+      "OTROS",
+      "SUPERMERCADO"
+    ]
+  },
+  "PROXIMIDAD": {
+    "GIRO CLIENTE": [
+      "FARMACIAS",
+      "MINISUPER",
+      "OTROS"
+    ]
+  },
+  "MAYOREO": {
+    "GIRO CLIENTE": [
+      "ABARROTERO",
+      "CREMERO ",
+      "DISTRIBUIDOR",
+      "MINISUPER",
+      "OTROS",
+      "OTROS GIROS"
+    ]
+  },
+  "FOOD SERVICE": {
+    "GIRO CLIENTE": [
+      "CAFETERIA",
+      "COMEDOR INDUSTRIAL",
+      "COMISARIATO",
+      "DISTRIBUIDORES FOODSERVICE",
+      "ENTRETENIMIENTO Y DIVERSIÓN",
+      "ESCUELAS",
+      "EVENTOS",
+      "FOOD TRUCK",
+      "HELADERIA",
+      "HOSPITALES",
+      "HOTELES",
+      "LINEAS AEREAS",
+      "LINEAS DE AUTOBUSES",
+      "MERCADO INFORMAL",
+      "OTROS",
+      "PANADERIA",
+      "RESTAURANTE",
+      "SERVICIOS DE COMEDOR",
+      "TIENDAS ESPECIALIZADAS"
+    ]
+  },
+  "GOBIERNO": {
+    "GIRO CLIENTE": [
+      "COMERCIALIZADORA",
+      "DISTRIBUIDOR",
+      "OTROS",
+      "SUPERMERCADO"
+    ]
+  },
+  "DISTRIBUIDORES": {
+    "GIRO CLIENTE": [
+      "DISTRIBUIDOR",
+      "OTROS"
+    ]
+  },
+  "CLUB DE PRECIOS": {
+    "GIRO CLIENTE": [
+      "CASH AND CARRY",
+      "OTROS"
+    ]
+  },
+  "eCOMMERCE": {
+    "GIRO CLIENTE": [
+      "COMERCIO ELECTRONICO",
+      "OTROS"
+    ]
+  },
+  "GEPP": {
+    "GIRO CLIENTE": [
+      "DISTRIBUIDOR",
+      "OTROS"
+    ]
+  },
+  "EXPORTACION": {
+    "GIRO CLIENTE": [
+      "COMERCIALIZADORA",
+      "DISTRIBUIDOR",
+      "OTROS"
+    ]
+  },
+  "MARCA PROPIA": {
+    "GIRO CLIENTE": [
+      "MINISUPER",
+      "OTROS",
+      "SUPERMERCADO"
+    ]
+  },
+  "B2B": {
+    "GIRO CLIENTE": [
+      "COMERCIALIZADORA",
+      "INDUSTRIA",
+      "MAQUILADORA",
+      "OTROS"
+    ]
+  },
+  "OTROS": {
+    "GIRO CLIENTE": [
+      "OTROS"
+    ]
+  },
+  "TIENDAS": {
+    "GIRO CLIENTE": [
+      "ABARROTES",
+      "OTROS",
+      "TIENDA"
+    ]
+  }
+}
