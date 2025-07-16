@@ -1,0 +1,869 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <title>Data validator</title>
+  <style>
+    table { border-collapse: collapse; width: 100%; margin-top: 20px; font-size: 14px; }
+    th, td { border: 1px solid #ccc; padding: 6px; text-align: left; }
+    td.invalid { background-color: #ffd6d6; }
+    td.valid { background-color: #d7ffd9; }
+    textarea { width: 100%; height: 100px; margin-top: 10px; }
+    select, button { font-size: 14px; margin-top: 10px; }
+    .toolbar { margin-top: 10px; display: flex; gap: 10px; flex-wrap: wrap; }
+    td[contenteditable="true"]:focus { outline: 2px solid #4a90e2; }
+    th { font-weight: bold; background: #f3f3f3; }
+    .col-oculta { display: none; }
+  </style>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>  
+</head>
+<body>
+  <!-- Selección de CEDIS -->
+  <label for="cedisSelect"><strong>CEDIS:</strong></label>
+  <select id="cedisSelect">
+    <option value="">-- Selecciona un CEDIS --</option>
+    <option value="ACAPULCO">ACAPULCO</option>
+    <option value="AGUASCALIENTES">AGUASCALIENTES</option>
+    <option value="ATLACOMULCO">ATLACOMULCO</option>
+    <option value="CANCUN">CANCUN</option>
+    <option value="CELAYA">CELAYA</option>
+    <option value="CHALCO">CHALCO</option>
+    <option value="CHIHUAHUA">CHIHUAHUA</option>
+    <option value="CUERNAVACA">CUERNAVACA</option>
+    <option value="ECATEPEC">ECATEPEC</option>
+    <option value="GUADALAJARA">GUADALAJARA</option>
+    <option value="LA VENTA">LA VENTA</option>
+    <option value="LEON">LEON</option>
+    <option value="MERIDA">MERIDA</option>
+    <option value="MONTERREY">MONTERREY</option>
+    <option value="MORELIA">MORELIA</option>
+    <option value="PACHUCA">PACHUCA</option>
+    <option value="PUEBLA">PUEBLA</option>
+    <option value="QUERETARO">QUERETARO</option>
+    <option value="REYES">REYES</option>
+    <option value="SAN LUIS POTOSI">SAN LUIS POTOSI</option>
+    <option value="TEJUPILCO">TEJUPILCO</option>
+    <option value="TEQUISQUIAPAN">TEQUISQUIAPAN</option>
+    <option value="TOLUCA">TOLUCA</option>
+    <option value="VALLEJO">VALLEJO</option>
+    <option value="VERACRUZ">VERACRUZ</option>
+    <option value="VILLAHERMOSA">VILLAHERMOSA</option>
+  </select>
+
+  <!-- Selección de Canal de Venta (solo "DETALLE") -->
+  <label for="canalSelect"><strong>Canal de venta:</strong></label>
+  <select id="canalSelect">
+    <option value="">-- Selecciona un canal de venta --</option>
+  </select>
+  
+  <!-- Ticket de servicio -->
+  <label for="ticketInput"><strong>Ticket de servicio:</strong></label>
+  <input type="text" id="ticketInput" placeholder="Número de ticket" style="width:180px; margin-right:10px;">
+
+  <h2>📋 Validar datos:</h2>
+  <!-- Área para pegar datos desde Excel -->
+  <textarea id="pasteArea" placeholder="Pega aquí los datos con encabezados..."></textarea>
+
+  <!-- Barra de herramientas -->
+  <div class="toolbar">
+    <button id="exportBtn">⬇️Generar requerimiento</button>
+    <button id="exportCsvBtn">⬇️ Generar CSV's</button>
+    <button id="deleteRowsBtn">🗑️ Eliminar filas seleccionadas</button>
+    <button id="clearAllBtn">🧹 Borrar todos los registros</button>
+  </div>
+
+  <!-- Tabla principal de validación -->
+  <table id="dataTable" spellcheck="false">
+    <thead>
+      <tr>
+        <th>RAZON SOCIAL</th>
+        <th>NOMBRE NEGOCIO</th>
+        <th>CALLE</th>
+        <th>EXT</th>
+        <th>INT</th>
+        <th>ENTRE CALLE</th>
+        <th>ENTRE CALLE2</th>
+        <th>CODIGO POSTAL</th>
+        <th>COLONIA</th>
+        <th>LATITUD</th>
+        <th>LONGITUD</th>
+        <th>SUBCANAL</th>
+        <th>GIRO COMERCIAL</th>
+        <th>VALIDACION</th>
+        <th>GEO-DISTANCIA</th>
+        <th>COMENTARIOS</th>
+        <th class="col-oculta">CANAL DE VENTA</th>
+        <th class="col-oculta">CEDIS ASIGNADO</th>
+        <th class="col-oculta">PLAZA DE DISTRIBUCION</th>
+        <th class="col-oculta">ZONA NIELSEN</th>
+        <th class="col-oculta">REGIONAL RESPONSABLE</th>
+        <th class="col-oculta">TIPO DE ENTREGA</th>
+        <th>ID CLIENTE</th>
+        <th>NÚMERO DE TICKET</th>        
+        <th class="col-oculta">ID SUCURSAL</th>
+        <th class="col-oculta">RFC1</th>
+        <th class="col-oculta">RFC2</th>
+        <th class="col-oculta">RFC3</th>
+        <th class="col-oculta">ESTRUCTURA DE VENTAS</th>
+        <th class="col-oculta">CANAL IBP</th>
+        <th class="col-oculta">SUBCANAL IBP</th>
+        <th class="col-oculta">AGRUPADOR IBP</th>
+        <th class="col-oculta">CLIENTE IBP</th>
+        <th>✔️</th>
+      </tr>
+    </thead>
+    <tbody></tbody>
+  </table>
+
+  <script>
+
+    // Declaración de catálogos y utilidades
+    let sepomex = {}, cedisInfo = {}, canalesVenta = {}, girosComerciales = {};
+    const HEADERS_ESPERADOS = [
+      "RAZON SOCIAL","NOMBRE NEGOCIO","CALLE","EXT","INT","ENTRE CALLE",
+      "ENTRE CALLE2","CODIGO POSTAL","COLONIA","LATITUD","LONGITUD","SUBCANAL","GIRO COMERCIAL"
+    ];
+
+    function aMayusculasSinAcentos(str) {
+      if (!str) return "";
+      return str.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toUpperCase();
+    }
+
+    function aMayusculasSinAcentosYUnEspacio(str) {
+      if (!str) return "";
+      return str.normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/\s+/g, " ").toUpperCase().trim();
+    }
+
+    function downloadCsv(nombre, filas) {
+      const csv = filas.map(arr =>
+        arr.map(val => {
+          if (typeof val === "string" && (val.includes(',') || val.includes('"') || val.includes('\n'))) {
+            val = '"' + val.replace(/"/g, '""') + '"';
+          }
+          return val;
+        }).join(",")
+      ).join("\r\n");
+      const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = nombre + ".csv";
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      setTimeout(() => URL.revokeObjectURL(url), 500);
+    }
+
+    fetch("canalesGiros.json")
+      .then(res => res.json())
+      .then(data => {
+        canalesVenta = data;
+        girosComerciales = data;
+        const canalSelect = document.getElementById("canalSelect");
+        canalSelect.innerHTML = "";
+        const defaultOption = document.createElement("option");
+        defaultOption.value = "";
+        defaultOption.textContent = "-- Selecciona un canal de venta --";
+        canalSelect.appendChild(defaultOption);
+        if (canalesVenta["DETALLE"]) {
+          const option = document.createElement("option");
+          option.value = "DETALLE";
+          option.textContent = "DETALLE";
+          canalSelect.appendChild(option);
+        }
+      })
+      .catch(err => alert("Error cargando canalesGiros.json: " + err));
+
+    fetch("sepomex.json")
+      .then(res => res.json())
+      .then(data => { sepomex = data; })
+      .catch(err => alert("Error cargando sepomex.json: " + err));
+
+    fetch("cedis.json")
+      .then(res => res.json())
+      .then(data => {
+        cedisInfo = data;
+        const select = document.getElementById("cedisSelect");
+        Object.keys(cedisInfo).forEach(cedis => {
+          if ([...select.options].every(opt => opt.value !== cedis)) {
+            const option = document.createElement("option");
+            option.value = cedis.trim();
+            option.textContent = cedis.trim();
+            select.appendChild(option);
+          }
+        });
+      })
+      .catch(err => alert("Error cargando cedis.json: " + err));
+
+    const contieneCaracteresEspeciales = texto => /[^A-Z0-9\s]/.test(texto);
+    const abreviaturas = [
+      "COL", "AV", "AVE", "BLVD", "BLV", "NUM", "NO", "EXT", "INT", "ENTRE",
+      "CDA", "MZ", "LT", "DEPTO", "EDIF", "PISO", "DEP", "OF", "PRIV", "BLVD",
+      "BLVR", "BLVAR", "BULEVAR", "BULEVARD", "BULEVAR", "AVDA", "BLDV", "BVAD",
+      "BOULEVAR", "CARR", "CAR", "CARRE", "CALZ", "CLZD", "DOM", "CTO", "HDA",
+      "REP", "RET", "FRACC", "ESQ", "PROL", "AND", "CJON"
+    ];
+    const contieneAbreviaturas = texto => {
+      const pattern = "\\b(" + abreviaturas.join("|") + ")\\b";
+      return new RegExp(pattern, "i").test(texto);
+    };
+
+    const corregirCoordenada = (valor, tipo) => {
+      if (!valor) return null;
+      const match = valor.match(/^(-?\d{2,3})\.(\d{1,10})$/);
+      if (!match) return null;
+      const enterosConSigno = match[1];
+      const enteros = enterosConSigno.replace('-', '');
+      let decimales = match[2];
+      let esperado = tipo === 'lng' && enteros.length === 3 ? 5 : 6;
+      decimales = decimales.slice(0, esperado).padEnd(esperado, '0');
+      return `${enterosConSigno}.${decimales}`;
+    };
+
+    const calcularDistanciaKm = (lat1, lng1, lat2, lng2) => {
+      const R = 6371;
+      const toRad = deg => deg * Math.PI / 180;
+      const dLat = toRad(lat2 - lat1);
+      const dLon = toRad(lng2 - lng1);
+      const a = Math.sin(dLat / 2) ** 2 +
+                Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) *
+                Math.sin(dLon / 2) ** 2;
+      return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+    };
+
+    const pasteArea = document.getElementById("pasteArea");
+    const tableBody = document.querySelector("#dataTable tbody");
+
+    pasteArea.addEventListener("paste", e => {
+      e.preventDefault();
+      const cedis = document.getElementById("cedisSelect").value;
+      if (!cedis) return alert("⚠️ Debes seleccionar un CEDIS antes de pegar datos.");
+      const canal = document.getElementById("canalSelect").value;
+      if (!canal) return alert("⚠️ Debes seleccionar un CANAL DE VENTA antes de pegar datos.");
+      const ticketValue = document.getElementById("ticketInput").value.trim();
+      const text = (e.clipboardData || window.clipboardData).getData("text");
+      const rows = text.trim().split("\n").map(r => r.split("\t"));
+      if (rows.length < 2) {
+        return alert("⚠️ Los datos pegados deben incluir los encabezados y al menos una fila de datos.");
+      }
+      const encabezadosPegados = rows[0].map(aMayusculasSinAcentosYUnEspacio);
+      const headersNormalizados = HEADERS_ESPERADOS.map(aMayusculasSinAcentosYUnEspacio);
+      if (
+        encabezadosPegados.length !== headersNormalizados.length ||
+        !encabezadosPegados.every((h, i) => h === headersNormalizados[i])
+      ) {
+        return alert("⚠️ Los encabezados pegados no coinciden con los requeridos:\n\n" +
+          HEADERS_ESPERADOS.join("\n"));
+      }
+      for (let rowIdx = 1; rowIdx < rows.length; rowIdx++) {
+        const cols = rows[rowIdx].map(aMayusculasSinAcentosYUnEspacio);
+        if (cols.length !== 13) continue;
+        const tr = document.createElement("tr");
+        for (let i = 0; i < 13; i++) {
+          const td = document.createElement("td");
+          td.contentEditable = true;
+          td.textContent = cols[i] || "";
+          tr.appendChild(td);
+        }
+        tr.appendChild(document.createElement("td"));
+        tr.appendChild(document.createElement("td"));
+        const tdComentarios = document.createElement("td");
+        tdComentarios.contentEditable = true;
+        tdComentarios.spellcheck = true;
+        tr.appendChild(tdComentarios);
+        const canalCve = canalesVenta[canal]?.["CVE CANAL"] || canal || "";
+        const canalTd = document.createElement("td");
+        canalTd.textContent = canalCve;
+        canalTd.className = "col-oculta";
+        tr.appendChild(canalTd);
+        const tdCedis = document.createElement("td");
+        tdCedis.textContent = cedisInfo[cedis]?.["CVE CEDIS"] || cedis;
+        tdCedis.className = "col-oculta";
+        tr.appendChild(tdCedis);
+        const tdPlaza = document.createElement("td");
+        tdPlaza.textContent = (cedisInfo[cedis] && cedisInfo[cedis]["CVE PLAZA"]) ? cedisInfo[cedis]["CVE PLAZA"][0] : "";
+        tdPlaza.className = "col-oculta";
+        tr.appendChild(tdPlaza);
+        const tdZona = document.createElement("td");
+        tdZona.textContent = (cedisInfo[cedis] && cedisInfo[cedis]["ZONA NIELSEN"]) ? cedisInfo[cedis]["ZONA NIELSEN"][0] : "";
+        tdZona.className = "col-oculta";
+        tr.appendChild(tdZona);
+        const tdRegional = document.createElement("td");
+        tdRegional.textContent = (cedisInfo[cedis] && cedisInfo[cedis]["REGIONAL RESPONSABLE"]) ? cedisInfo[cedis]["REGIONAL RESPONSABLE"][0] : "";
+        tdRegional.className = "col-oculta";
+        tr.appendChild(tdRegional);
+        const tdEntrega = document.createElement("td");
+        tdEntrega.textContent = (cedisInfo[cedis] && cedisInfo[cedis]["TIPO DE ENTREGA"]) ? cedisInfo[cedis]["TIPO DE ENTREGA"][0] : "";
+        tdEntrega.className = "col-oculta";
+        tr.appendChild(tdEntrega);
+        const tdIdCliente = document.createElement("td");
+        tdIdCliente.contentEditable = true;
+        tdIdCliente.classList.add("id-cliente");
+        tr.appendChild(tdIdCliente);
+        const tdTicket = document.createElement("td");        
+        tdTicket.textContent = ticketValue;
+        tr.appendChild(tdTicket);        
+        const tdIdSucursal = document.createElement("td");
+        tdIdSucursal.textContent = "0";
+        tdIdSucursal.className = "col-oculta";
+        tr.appendChild(tdIdSucursal);
+        const tdRfc1 = document.createElement("td");
+        tdRfc1.textContent = "XAXX";
+        tdRfc1.className = "col-oculta";
+        tr.appendChild(tdRfc1);
+        const tdRfc2 = document.createElement("td");
+        tdRfc2.textContent = "010101";
+        tdRfc2.className = "col-oculta";
+        tr.appendChild(tdRfc2);
+        const tdRfc3 = document.createElement("td");
+        tdRfc3.textContent = "000";
+        tdRfc3.className = "col-oculta";
+        tr.appendChild(tdRfc3);
+        const tdEstructuraVentas = document.createElement("td");
+        tdEstructuraVentas.textContent = "MTT";
+        tdEstructuraVentas.className = "col-oculta";
+        tr.appendChild(tdEstructuraVentas);
+        const tdCanalIbp = document.createElement("td");
+        tdCanalIbp.textContent = canalCve;
+        tdCanalIbp.className = "col-oculta";
+        tr.appendChild(tdCanalIbp);
+        const tdSubcanalIbp = document.createElement("td");
+        tdSubcanalIbp.textContent = "TT";
+        tdSubcanalIbp.className = "col-oculta";
+        tr.appendChild(tdSubcanalIbp);
+        const tdAgrupadorIbp = document.createElement("td");
+        tdAgrupadorIbp.textContent = "90";
+        tdAgrupadorIbp.className = "col-oculta";
+        tr.appendChild(tdAgrupadorIbp);
+        const tdClienteIbp = document.createElement("td");
+        tdClienteIbp.textContent = "92";
+        tdClienteIbp.className = "col-oculta";
+        tr.appendChild(tdClienteIbp);
+        const tdCheck = document.createElement("td");
+        const checkbox = document.createElement("input");
+        checkbox.type = "checkbox";
+        tdCheck.appendChild(checkbox);
+        tr.appendChild(tdCheck);
+        tableBody.appendChild(tr);
+        validarFila(tr);
+        agregarValidacionTiempoReal(tr);
+      }
+      // IDs automáticos
+      const idClienteCells = tableBody.querySelectorAll("tr .id-cliente");
+      if (idClienteCells.length) {
+        idClienteCells[0].addEventListener("blur", function() {
+          let val = parseInt(this.textContent.trim());
+          if (!isNaN(val)) {
+            for (let i = 1; i < idClienteCells.length; i++) {
+              idClienteCells[i].textContent = val + i;
+            }
+          }
+        });
+      }
+    });
+
+    // Asigna eventos en cada celda editable para validar y normalizar su contenido al editar
+    function agregarValidacionTiempoReal(tr) {
+      tr.querySelectorAll("td[contenteditable='true']").forEach((td, idx) => {
+        // Código Postal (índice 7)
+        if (idx === 7) {
+          td.addEventListener("blur", function () {
+            td.textContent = td.textContent.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toUpperCase();
+            const cp = td.textContent.trim();
+            const ref = sepomex[cp];
+            const tdColonia = tr.children[8];
+
+            let valorColonia = tdColonia.querySelector("select")
+              ? tdColonia.querySelector("select").options[0].value
+              : tdColonia.textContent.trim();
+
+            const normalizar = s => s.normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/\s+/g, " ").toUpperCase().trim();
+
+            // Si la colonia no coincide con SEPOMEX, muestra select de opciones válidas
+            if (ref && Array.isArray(ref.colonias) && ref.colonias.length > 0) {
+              const coloniasValidas = ref.colonias.map(normalizar);
+
+              if (!coloniasValidas.includes(normalizar(valorColonia))) {
+                const select = document.createElement("select");
+                const optIngresado = document.createElement("option");
+                optIngresado.value = optIngresado.textContent = valorColonia;
+                optIngresado.selected = true;
+                optIngresado.disabled = true;
+                select.appendChild(optIngresado);
+
+                coloniasValidas.forEach(col => {
+                  if (col !== normalizar(valorColonia)) {
+                    const opt = document.createElement("option");
+                    opt.value = opt.textContent = col;
+                    select.appendChild(opt);
+                  }
+                });
+
+                select.addEventListener("change", function () {
+                  tdColonia.innerHTML = this.value;
+                  validarFila(tr);
+                });
+
+                tdColonia.innerHTML = "";
+                tdColonia.appendChild(select);
+              } else {
+                tdColonia.innerHTML = valorColonia;
+              }
+            }
+            validarFila(tr);
+          });
+        }
+        // LATITUD (índice 9) o LONGITUD (índice 10)
+        else if (idx === 9 || idx === 10) {
+          td.addEventListener("input", function () {
+            validarFila(tr);
+          });
+          td.addEventListener("blur", function () {
+            let txt = td.textContent;
+            td.textContent = txt.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toUpperCase();
+            validarFila(tr);
+          });
+        }
+        // RAZON SOCIAL, NOMBRE NEGOCIO, CALLE, ENTRE CALLE, ENTRE CALLE2
+        else if (idx === 0 || idx === 1 || idx === 2 || idx === 5 || idx === 6) {
+          td.addEventListener("input", function (e) {
+            let pos = getCaretCharacterOffsetWithin(td);
+            let txt = td.textContent;
+            let nuevoTxt = txt.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toUpperCase();
+            if (txt !== nuevoTxt) {
+              td.textContent = nuevoTxt;
+              setCaretPosition(td, pos);
+            }
+            validarFila(tr);
+          });
+          td.addEventListener("blur", function () {
+            let txt = td.textContent;
+            td.textContent = txt.normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/\s+/g, " ").toUpperCase().trim();
+            validarFila(tr);
+          });
+        }
+        // Otros campos editables (EXT, INT, etc)
+        else {
+          td.addEventListener("input", function () {
+            validarFila(tr);
+          });
+          td.addEventListener("blur", function () {
+            if (!td.classList.contains("id-cliente")) {
+              let txt = td.textContent;
+              td.textContent = txt.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toUpperCase();
+            }
+            validarFila(tr);
+          });
+        }
+      });
+    }
+
+    // Función para obtener la posición actual del cursor en un elemento editable
+    function getCaretCharacterOffsetWithin(element) {
+      let caretOffset = 0;
+      let doc = element.ownerDocument || element.document;
+      let win = doc.defaultView || doc.parentWindow;
+      let sel;
+      if (typeof win.getSelection != "undefined") {
+        sel = win.getSelection();
+        if (sel.rangeCount > 0) {
+          let range = sel.getRangeAt(0);
+          let preCaretRange = range.cloneRange();
+          preCaretRange.selectNodeContents(element);
+          preCaretRange.setEnd(range.endContainer, range.endOffset);
+          caretOffset = preCaretRange.toString().length;
+        }
+      }
+      return caretOffset;
+    }
+
+    // Función para restaurar la posición del cursor en un elemento editable
+    function setCaretPosition(element, chars) {
+      if (chars >= 0) {
+        let selection = window.getSelection();
+        let range = document.createRange();
+        range.selectNodeContents(element);
+        range.collapse(true);
+        let node = element;
+        let charIndex = 0, foundStart = false;
+
+        function traverseNodes(node) {
+          if (node.nodeType === 3) { // Node.TEXT_NODE
+            let nextCharIndex = charIndex + node.length;
+            if (!foundStart && chars <= nextCharIndex) {
+              range.setStart(node, chars - charIndex);
+              range.collapse(true);
+              foundStart = true;
+            }
+            charIndex = nextCharIndex;
+          } else {
+            for (let i = 0; i < node.childNodes.length; i++) {
+              traverseNodes(node.childNodes[i]);
+              if (foundStart) break;
+            }
+          }
+        }
+        traverseNodes(node);
+        if (!foundStart) range.setStart(node, node.childNodes.length);
+        selection.removeAllRanges();
+        selection.addRange(range);
+      }
+    }
+
+    // Validación de fila
+    function validarFila(tr) {
+      const cells = tr.querySelectorAll("td");
+      const errores = [];
+      const [
+        razon, negocio, calle, ext, int, entre1, entre2,
+        cp, col, lat, lng, subcanal, giro
+      ] = Array.from(cells).slice(0, 13).map(td => td.textContent.trim().toUpperCase());
+      const canal = document.getElementById("canalSelect").value.trim();
+      const cpValido = /^\d{5}$/.test(cp);
+      const ref = sepomex[cp] || {};
+      const cpExiste = cpValido && Object.keys(ref).length > 0;
+      const coloniasValidas = Array.isArray(ref.colonias) ? ref.colonias.map(c => c.toUpperCase()) : [];
+      const marcar = (i, condicion, mensaje) => {
+        cells[i].classList.remove("valid", "invalid");
+        cells[i].classList.add(condicion ? "valid" : "invalid");
+        if (!condicion && mensaje) errores.push(mensaje);
+      };
+      marcar(0, razon && !contieneCaracteresEspeciales(razon), "RAZÓN inválida");
+      marcar(1, negocio && !contieneCaracteresEspeciales(negocio), "NEGOCIO inválida");
+      marcar(2, calle && !contieneCaracteresEspeciales(calle) && !contieneAbreviaturas(calle), "CALLE inválida");
+      marcar(3, /^[A-Z0-9\s]+$/.test(ext), "EXT inválido");
+      marcar(4, !int || /^[A-Z0-9\s]+$/.test(int), "INT inválido");
+      marcar(5, !entre1 || (!contieneCaracteresEspeciales(entre1) && !contieneAbreviaturas(entre1)), "ENTRE CALLE inválida");
+      marcar(6, !entre2 || (!contieneCaracteresEspeciales(entre2) && !contieneAbreviaturas(entre2)), "ENTRE CALLE2 inválida");
+      marcar(7, cpExiste, "CP inválido o inexistente");
+
+      // Validación y select de colonia según catálogo
+      if (cpExiste && !coloniasValidas.includes(col)) {
+        const currentTd = cells[8];
+        let originalValue = col;
+        if (currentTd.querySelector("select")) {
+          const existingSelect = currentTd.querySelector("select");
+          const selectedOption = existingSelect.options[0];
+          if (selectedOption && selectedOption.disabled) {
+            originalValue = selectedOption.value;
+          }
+        }
+        currentTd.innerHTML = "";
+        const select = document.createElement("select");
+        const optIngresado = document.createElement("option");
+        optIngresado.value = optIngresado.textContent = originalValue;
+        optIngresado.selected = true;
+        optIngresado.disabled = true;
+        select.appendChild(optIngresado);
+        const normalizar = str => str.normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/\s+/g, " ").trim().toUpperCase();
+        const colNormalizada = normalizar(originalValue);
+        (ref.colonias || []).forEach(option => {
+          const optNormalizada = normalizar(option);
+          if (optNormalizada !== colNormalizada) {
+            const opt = document.createElement("option");
+            opt.textContent = opt.value = optNormalizada;
+            select.appendChild(opt);
+          }
+        });
+        select.addEventListener("change", () => {
+          currentTd.textContent = select.value.toUpperCase();
+          validarFila(tr);
+        });
+        currentTd.appendChild(select);
+        currentTd.classList.remove("valid");
+        currentTd.classList.add("invalid");
+        errores.push("COLONIA no coincide con CP");
+      } else {
+        cells[8].innerHTML = col;
+        marcar(8, coloniasValidas.includes(col), "COLONIA inválida");
+      }
+
+      // Coordenadas y distancia
+      const tdLat = cells[9];
+      const tdLng = cells[10];
+      const latFix = corregirCoordenada(lat, 'lat');
+      const lngFix = corregirCoordenada(lng, 'lng');
+      if (document.activeElement !== tdLat && latFix && lat !== latFix) {
+        tdLat.textContent = latFix;
+      }
+      if (document.activeElement !== tdLng && lngFix && lng !== lngFix) {
+        tdLng.textContent = lngFix;
+      }
+      tdLat.classList.toggle("valid", !!latFix);
+      tdLat.classList.toggle("invalid", !latFix);
+      tdLng.classList.toggle("valid", !!lngFix);
+      tdLng.classList.toggle("invalid", !lngFix);
+      if (!latFix) errores.push("LATITUD inválida");
+      if (!lngFix) errores.push("LONGITUD inválida");
+
+      // GEO-DISTANCIA: SIEMPRE recalcula al editar CP, LAT o LNG
+      let mensajeDistancia = "❌ Sin validar";
+      let latVal = Number(tdLat.textContent.replace(',', '.'));
+      let lngVal = Number(tdLng.textContent.replace(',', '.'));
+      if (
+        latVal && lngVal && ref.lat && ref.lng && !isNaN(latVal) && !isNaN(lngVal)
+      ) {
+        const distancia = calcularDistanciaKm(latVal, lngVal, +ref.lat, +ref.lng);
+        const zona = (ref.zona || "URBANA").toUpperCase();
+        const umbral = zona === "RURAL" ? 5 : 3;
+        mensajeDistancia = distancia <= umbral
+          ? `✔️ ${distancia.toFixed(2)} km`
+          : `⚠️ ${distancia.toFixed(2)} km (límite ${umbral} km)`;
+      }
+      cells[14].textContent = mensajeDistancia;
+      cells[14].className = mensajeDistancia.startsWith("✔️") ? "valid" : "invalid";
+
+      // SUBCANAL Y GIRO
+      const subcanales = canalesVenta[canal]?.SUBCANAL || [];
+      if (subcanal && !subcanales.includes(subcanal)) {
+        const currentTd = cells[11];
+        let originalValue = subcanal;
+        if (currentTd.querySelector("select")) {
+          const existingSelect = currentTd.querySelector("select");
+          const selectedOption = existingSelect.options[0];
+          if (selectedOption && selectedOption.disabled) {
+            originalValue = selectedOption.value;
+          }
+        }
+        const select = document.createElement("select");
+        const optIngresado = document.createElement("option");
+        optIngresado.value = optIngresado.textContent = originalValue;
+        optIngresado.selected = true;
+        optIngresado.disabled = true;
+        select.appendChild(optIngresado);
+        subcanales.forEach(option => {
+          if (option !== originalValue) {
+            const opt = document.createElement("option");
+            opt.value = opt.textContent = option;
+            select.appendChild(opt);
+          }
+        });
+        select.addEventListener("change", () => {
+          cells[11].textContent = select.value.toUpperCase();
+          validarFila(tr);
+        });
+        currentTd.innerHTML = "";
+        currentTd.appendChild(select);
+        currentTd.classList.remove("valid");
+        currentTd.classList.add("invalid");
+        errores.push("SUBCANAL no corresponde al canal seleccionado");
+      } else {
+        cells[11].classList.remove("valid", "invalid");
+        cells[11].classList.add(subcanales.includes(subcanal) ? "valid" : "invalid");
+        if (!subcanales.includes(subcanal)) errores.push("SUBCANAL inválido");
+      }
+
+      const giros = canalesVenta[canal]?.["GIRO CLIENTE"] || [];
+      if (giro && !giros.includes(giro)) {
+        const currentTd = cells[12];
+        let originalValue = giro;
+        if (currentTd.querySelector("select")) {
+          const existingSelect = currentTd.querySelector("select");
+          const selectedOption = existingSelect.options[0];
+          if (selectedOption && selectedOption.disabled) {
+            originalValue = selectedOption.value;
+          }
+        }
+        const select = document.createElement("select");
+        const optIngresado = document.createElement("option");
+        optIngresado.value = optIngresado.textContent = originalValue;
+        optIngresado.selected = true;
+        optIngresado.disabled = true;
+        select.appendChild(optIngresado);
+        giros.forEach(option => {
+          if (option !== originalValue) {
+            const opt = document.createElement("option");
+            opt.value = opt.textContent = option;
+            select.appendChild(opt);
+          }
+        });
+        select.addEventListener("change", () => {
+          cells[12].textContent = select.value.toUpperCase();
+          validarFila(tr);
+        });
+        currentTd.innerHTML = "";
+        currentTd.appendChild(select);
+        currentTd.classList.remove("valid");
+        currentTd.classList.add("invalid");
+        errores.push("GIRO COMERCIAL no corresponde al canal seleccionado");
+      } else {
+        cells[12].classList.remove("valid", "invalid");
+        cells[12].classList.add(giros.includes(giro) ? "valid" : "invalid");
+        if (!giros.includes(giro)) errores.push("GIRO COMERCIAL inválido");
+      }
+
+      // VALIDACIÓN GENERAL
+      cells[13].textContent = errores.length ? `❌ ${errores.join(", ")}` : "✔️ VÁLIDO";
+      cells[13].className = errores.length ? "invalid" : "valid";
+    }
+
+    // Exportación y botones
+    const columnasDeseadas = [
+      { titulo: "RAZÓN SOCIAL", idx: 0 },
+      { titulo: "NOMBRE NEGOCIO", idx: 1 },
+      { titulo: "CALLE", idx: 2 },
+      { titulo: "EXT", idx: 3 },
+      { titulo: "INT", idx: 4 },
+      { titulo: "ENTRE CALLE", idx: 5 },
+      { titulo: "ENTRE CALLE2", idx: 6 },
+      { titulo: "CODIGO POSTAL", idx: 7 },
+      { titulo: "COLONIA", idx: 8 },
+      { titulo: "LATITUD", idx: 9 },
+      { titulo: "LONGITUD", idx: 10 },
+      { titulo: "SUBCANAL", idx: 11 },
+      { titulo: "GIRO COMERCIAL", idx: 12 },
+      { titulo: "VALIDACION", idx: 13 },
+      { titulo: "GEO-DISTANCIA", idx: 14 },
+      { titulo: "COMENTARIOS", idx: 15 }
+    ];
+
+    document.getElementById("exportBtn").addEventListener("click", () => {
+      const COL_IDX_COLONIA = 8;
+      const COL_IDX_SUBCANAL = 11;
+      const COL_IDX_GIRO = 12;
+      const ws_data = [ columnasDeseadas.map(col => col.titulo) ];
+      tableBody.querySelectorAll("tr").forEach(tr => {
+        const tds = tr.querySelectorAll("td");
+        ws_data.push(
+          columnasDeseadas.map(col => {
+            const td = tds[col.idx];
+            if (!td) return "";
+            if (col.idx === COL_IDX_COLONIA || col.idx === COL_IDX_SUBCANAL || col.idx === COL_IDX_GIRO) {
+              const select = td.querySelector("select");
+              if (select) {
+                return select.options[select.selectedIndex]?.value || select.options[0]?.value || "";
+              }
+            }
+            return td.textContent.replace(/\s+/g, " ").trim();
+          })
+        );
+      });
+      const wb = XLSX.utils.book_new();
+      const ws = XLSX.utils.aoa_to_sheet(ws_data);
+      XLSX.utils.book_append_sheet(wb, ws, "Hoja");
+      XLSX.writeFile(wb, "clientes.xlsx");
+    });
+
+    document.getElementById("exportCsvBtn").addEventListener("click", function() {
+      const filas = Array.from(document.querySelectorAll("#dataTable tbody tr"));
+      if (filas.length === 0) {
+        alert("No hay datos para exportar.");
+        return;
+      }
+      function valor(td) {
+        const sel = td.querySelector("select");
+        return sel ? (sel.options[sel.selectedIndex]?.value || sel.options[0]?.value || "") : td.textContent.trim();
+      }
+      const idx = {
+        "ID CLIENTE": 22,
+        "ID SUCURSAL": 24,
+        "RAZON SOCIAL": 0,
+        "CALLE": 2,
+        "INT": 4,
+        "EXT": 3,
+        "COLONIA": 8,
+        "CODIGO POSTAL": 7,
+        "RFC1": 25,
+        "RFC2": 26,
+        "RFC3": 27,
+        "NOMBRE NEGOCIO": 1,
+        "NUMERO DE TICKET": 23,
+        "CVE CEDIS": 17,
+        "PLAZA DE DISTRIBUCION": 18,
+        "LATITUD": 9,
+        "LONGITUD": 10,
+        "ZONA NIELSEN": 19,
+        "TIPO DE ENTREGA": 21,
+        "REGIONAL RESPONSABLE": 20,
+        "ESTRUCTURA DE VENTAS": 28,
+        "CANAL IBP": 29,
+        "SUBCANAL IBP": 30,
+        "AGRUPADOR IBP": 31,
+        "CLIENTE IBP": 32
+      };
+      downloadCsv("registroClientes", filas.map(tr => {
+        const tds = tr.querySelectorAll("td");
+        return [
+          valor(tds[idx["ID CLIENTE"]]),
+          valor(tds[idx["ID SUCURSAL"]]),
+          valor(tds[idx["RAZON SOCIAL"]]),
+          valor(tds[idx["CALLE"]]),
+          valor(tds[idx["INT"]]),
+          valor(tds[idx["EXT"]]),
+          valor(tds[idx["COLONIA"]]),
+          valor(tds[idx["CODIGO POSTAL"]]),
+          valor(tds[idx["RFC1"]]),
+          valor(tds[idx["RFC2"]]),
+          valor(tds[idx["RFC3"]]),
+          valor(tds[idx["NOMBRE NEGOCIO"]]),
+          valor(tds[idx["NUMERO DE TICKET"]])
+        ];
+      }));
+      downloadCsv("cambioCedis", filas.map(tr => {
+        const tds = tr.querySelectorAll("td");
+        return [
+          valor(tds[idx["CVE CEDIS"]]),
+          valor(tds[idx["ID CLIENTE"]]),
+          valor(tds[idx["ID SUCURSAL"]]),
+          valor(tds[idx["PLAZA DE DISTRIBUCION"]])
+        ];
+      }));
+      downloadCsv("geoLoc", filas.map(tr => {
+        const tds = tr.querySelectorAll("td");
+        return [
+          valor(tds[idx["ID CLIENTE"]]),
+          valor(tds[idx["ID SUCURSAL"]]),
+          valor(tds[idx["LATITUD"]]),
+          valor(tds[idx["LONGITUD"]]),
+          valor(tds[idx["ZONA NIELSEN"]]),
+          valor(tds[idx["TIPO DE ENTREGA"]]),
+          valor(tds[idx["REGIONAL RESPONSABLE"]])
+        ];
+      }));
+      downloadCsv("estructuraVtas", filas.map(tr => {
+        const tds = tr.querySelectorAll("td");
+        return [
+          valor(tds[idx["ID CLIENTE"]]),
+          valor(tds[idx["ID SUCURSAL"]]),
+          "",
+          valor(tds[idx["ESTRUCTURA DE VENTAS"]])
+        ];
+      }));
+      downloadCsv("clasifSOP", filas.map(tr => {
+        const tds = tr.querySelectorAll("td");
+        return [
+          valor(tds[idx["ID CLIENTE"]]),
+          valor(tds[idx["ID SUCURSAL"]]),
+          "",
+          valor(tds[idx["CANAL IBP"]]),
+          valor(tds[idx["SUBCANAL IBP"]]),
+          valor(tds[idx["AGRUPADOR IBP"]]),
+          valor(tds[idx["CLIENTE IBP"]])
+        ];
+      }));
+    });
+
+    document.getElementById("deleteRowsBtn").addEventListener("click", () => {
+      tableBody.querySelectorAll("tr").forEach(tr => {
+        const checkbox = tr.querySelector("input[type='checkbox']");
+        if (checkbox && checkbox.checked) tr.remove();
+      });
+    });
+
+    document.getElementById("clearAllBtn").addEventListener("click", () => {
+      if (confirm("¿Estás seguro de que deseas borrar todos los registros?")) {
+        tableBody.innerHTML = "";
+        document.getElementById("cedisSelect").value = "";
+        document.getElementById("canalSelect").value = "";
+        document.getElementById("ticketInput").value = "";
+      }
+    });
+
+    window.addEventListener("DOMContentLoaded", () => {
+      document.getElementById("cedisSelect").selectedIndex = 0;
+      document.getElementById("canalSelect").selectedIndex = 0;
+    });
+    
+  </script>
+</body>
+</html>
